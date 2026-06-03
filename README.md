@@ -1,6 +1,6 @@
 # TASKFLOW
 
-A full-stack task management system built using:
+A full stack task management system built using
 
 - ASP.NET Core Minimal API
 - Entity Framework Core
