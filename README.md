@@ -1,4 +1,4 @@
-# TASKFLOW-Project
+# TASKFLOW
 
 A full-stack task management system built using:
 
