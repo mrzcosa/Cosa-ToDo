@@ -3,6 +3,7 @@
 // ==========================================
 
 let tasks = [];
+let currentEditId = null;
 
 // ==========================================
 // INITIALIZATION
@@ -22,9 +23,17 @@ async function loadTasks() {
 
         const response = await fetch('/tasks');
 
+        if (!response.ok)
+            throw new Error('Failed to load tasks');
+
         tasks = await response.json();
 
         updateCards();
+
+        if (typeof renderCharts === "function") {
+            renderCharts();
+        }
+
         renderTasks();
 
     } catch (error) {
@@ -40,16 +49,34 @@ async function addTask() {
 
     try {
 
-        const response = await fetch('/tasks', {
+        let response;
 
-            method: 'POST',
+        if (currentEditId) {
 
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            response = await fetch(`/tasks/${currentEditId}`, {
 
-            body: JSON.stringify(payload)
-        });
+                method: 'PUT',
+
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+
+                body: JSON.stringify(payload)
+            });
+
+        } else {
+
+            response = await fetch('/tasks', {
+
+                method: 'POST',
+
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+
+                body: JSON.stringify(payload)
+            });
+        }
 
         if (!response.ok) {
 
@@ -58,7 +85,12 @@ async function addTask() {
             throw new Error(message);
         }
 
+        currentEditId = null;
+
         clearForm();
+
+        document.querySelector('.btn-primary').textContent =
+            'Add Task';
 
         loadTasks();
 
@@ -73,11 +105,18 @@ async function deleteTask(id) {
     if (!confirm('Delete this task?'))
         return;
 
-    await fetch(`/tasks/${id}`, {
-        method: 'DELETE'
-    });
+    try {
 
-    loadTasks();
+        await fetch(`/tasks/${id}`, {
+            method: 'DELETE'
+        });
+
+        loadTasks();
+
+    } catch (error) {
+
+        console.error(error);
+    }
 }
 
 // ==========================================
@@ -113,6 +152,9 @@ function getFormData() {
 function clearForm() {
 
     document.getElementById('title').value = '';
+    document.getElementById('dueDate').value = '';
+    document.getElementById('priority').value = 'Medium';
+    document.getElementById('status').value = 'Pending';
     document.getElementById('estimatedHours').value = '';
     document.getElementById('reward').value = '';
 }
@@ -136,14 +178,23 @@ function updateCards() {
             task.status === 'Completed'
         ).length;
 
-    document.getElementById('totalTasks').textContent =
-        total;
+    const totalElement =
+        document.getElementById('totalTasks');
 
-    document.getElementById('pendingTasks').textContent =
-        pending;
+    const pendingElement =
+        document.getElementById('pendingTasks');
 
-    document.getElementById('completedTasks').textContent =
-        completed;
+    const completedElement =
+        document.getElementById('completedTasks');
+
+    if (totalElement)
+        totalElement.textContent = total;
+
+    if (pendingElement)
+        pendingElement.textContent = pending;
+
+    if (completedElement)
+        completedElement.textContent = completed;
 }
 
 // ==========================================
@@ -152,14 +203,18 @@ function updateCards() {
 
 function renderTasks() {
 
+    const searchInput =
+        document.getElementById('search');
+
     const searchText =
-        document.getElementById('search')
-            .value
-            .toLowerCase();
+        searchInput
+            ? searchInput.value.toLowerCase()
+            : '';
 
     const filteredTasks =
         tasks.filter(task =>
-            task.title.toLowerCase()
+            task.title
+                .toLowerCase()
                 .includes(searchText)
         );
 
@@ -182,9 +237,11 @@ function renderTasks() {
             <td>${task.priority}</td>
 
             <td>
-                <span class="badge ${task.status === 'Completed'
-                    ? 'completed'
-                    : 'pending'}">
+                <span class="badge ${
+                    task.status === 'Completed'
+                        ? 'completed'
+                        : 'pending'
+                }">
                     ${task.status}
                 </span>
             </td>
@@ -194,11 +251,19 @@ function renderTasks() {
             <td>${task.rewardForCompletion}</td>
 
             <td>
+
+                <button
+                    class="btn-primary"
+                    onclick="editTask(${task.id})">
+                    Edit
+                </button>
+
                 <button
                     class="btn-danger"
                     onclick="deleteTask(${task.id})">
                     Delete
                 </button>
+
             </td>
 
         </tr>`;
@@ -206,4 +271,40 @@ function renderTasks() {
 
     document.getElementById('taskTable').innerHTML =
         html;
+}
+
+// ==========================================
+// EDIT TASK
+// ==========================================
+
+function editTask(id) {
+
+    const task =
+        tasks.find(t => t.id === id);
+
+    if (!task)
+        return;
+
+    document.getElementById('title').value =
+        task.title;
+
+    document.getElementById('dueDate').value =
+        task.dueDate.split('T')[0];
+
+    document.getElementById('priority').value =
+        task.priority;
+
+    document.getElementById('status').value =
+        task.status;
+
+    document.getElementById('estimatedHours').value =
+        task.estimatedHours;
+
+    document.getElementById('reward').value =
+        task.rewardForCompletion;
+
+    currentEditId = id;
+
+    document.querySelector('.btn-primary').textContent =
+        'Update Task';
 }

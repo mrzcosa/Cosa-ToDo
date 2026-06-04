@@ -21,9 +21,7 @@ app.UseStaticFiles();
 // GET ALL PENDING TASKS
 app.MapGet("/tasks", async (TodoDbContext db) =>
 {
-    return await db.Tasks
-        .Where(t => t.Status == "Pending")
-        .ToListAsync();
+    return await db.Tasks.ToListAsync();
 });
 
 
