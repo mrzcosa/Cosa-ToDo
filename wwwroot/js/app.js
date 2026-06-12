@@ -39,7 +39,9 @@ async function loadTasks() {
     } catch (error) {
 
         console.error(error);
-        alert('Unable to load tasks.');
+
+        if (typeof showToast === 'function')
+            showToast('Unable to load tasks');
     }
 }
 
@@ -50,6 +52,7 @@ async function addTask() {
     try {
 
         let response;
+        let successMessage;
 
         if (currentEditId) {
 
@@ -64,6 +67,8 @@ async function addTask() {
                 body: JSON.stringify(payload)
             });
 
+            successMessage = 'Task updated successfully';
+
         } else {
 
             response = await fetch('/tasks', {
@@ -76,6 +81,8 @@ async function addTask() {
 
                 body: JSON.stringify(payload)
             });
+
+            successMessage = 'Task added successfully';
         }
 
         if (!response.ok) {
@@ -89,14 +96,21 @@ async function addTask() {
 
         clearForm();
 
-        document.querySelector('.btn-primary').textContent =
-            'Add Task';
+        const addButton =
+            document.querySelector('.btn-primary');
+
+        if (addButton)
+            addButton.textContent = 'Add Task';
+
+        if (typeof showToast === 'function')
+            showToast(successMessage);
 
         loadTasks();
 
     } catch (error) {
 
-        alert(error.message);
+        if (typeof showToast === 'function')
+            showToast(error.message);
     }
 }
 
@@ -111,11 +125,39 @@ async function deleteTask(id) {
             method: 'DELETE'
         });
 
+        if (typeof showToast === 'function')
+            showToast('Task deleted successfully');
+
         loadTasks();
 
     } catch (error) {
 
         console.error(error);
+
+        if (typeof showToast === 'function')
+            showToast('Delete failed');
+    }
+}
+
+async function toggleStatus(id) {
+
+    try {
+
+        await fetch(`/tasks/${id}/toggle`, {
+            method: 'PATCH'
+        });
+
+        if (typeof showToast === 'function')
+            showToast('Status updated');
+
+        loadTasks();
+
+    } catch (error) {
+
+        console.error(error);
+
+        if (typeof showToast === 'function')
+            showToast('Status update failed');
     }
 }
 
@@ -237,13 +279,20 @@ function renderTasks() {
             <td>${task.priority}</td>
 
             <td>
-                <span class="badge ${
-                    task.status === 'Completed'
-                        ? 'completed'
-                        : 'pending'
-                }">
+
+                <span
+                    class="badge ${
+                        task.status === 'Completed'
+                            ? 'completed'
+                            : 'pending'
+                    }"
+                    style="cursor:pointer"
+                    onclick="toggleStatus(${task.id})">
+
                     ${task.status}
+
                 </span>
+
             </td>
 
             <td>${task.estimatedHours}</td>
@@ -305,6 +354,9 @@ function editTask(id) {
 
     currentEditId = id;
 
-    document.querySelector('.btn-primary').textContent =
-        'Update Task';
+    const addButton =
+        document.querySelector('.btn-primary');
+
+    if (addButton)
+        addButton.textContent = 'Update Task';
 }
